@@ -313,6 +313,7 @@ mkdir -p example
 mkdir -p example/fixture
 mkdir -p example/feint
 mkdir -p example/fenl
+mkdir -p example/require_tag_issue
 mkdir -p example/make_buildlink
 mkdir -p example/tutorial
 
@@ -407,6 +408,17 @@ echo "" >> example/fenl/Makefile
 echo "clean:" >> example/fenl/Makefile
 echo -e "\t\$(MAKE) -f ${KOKKOS_PATH}/example/fenl/Makefile ${KOKKOS_SETTINGS} clean" >> example/fenl/Makefile
 
+echo "KOKKOS_SETTINGS=${KOKKOS_SETTINGS}" > example/require_tag_issue/Makefile
+echo "" >> example/require_tag_issue/Makefile
+echo "all:" >> example/require_tag_issue/Makefile
+echo -e "\t\$(MAKE) -f ${KOKKOS_PATH}/example/require_tag_issue/Makefile ${KOKKOS_SETTINGS}" >> example/require_tag_issue/Makefile
+echo "" >> example/require_tag_issue/Makefile
+echo "test: all" >> example/require_tag_issue/Makefile
+echo -e "\t\$(MAKE) -f ${KOKKOS_PATH}/example/require_tag_issue/Makefile ${KOKKOS_SETTINGS} test" >> example/require_tag_issue/Makefile
+echo "" >> example/require_tag_issue/Makefile
+echo "clean:" >> example/require_tag_issue/Makefile
+echo -e "\t\$(MAKE) -f ${KOKKOS_PATH}/example/require_tag_issue/Makefile ${KOKKOS_SETTINGS} clean" >> example/require_tag_issue/Makefile
+
 echo "KOKKOS_SETTINGS=${KOKKOS_SETTINGS}" > example/make_buildlink/Makefile
 echo "" >> example/make_buildlink/Makefile
 echo "build:" >> example/make_buildlink/Makefile
@@ -444,6 +456,7 @@ $()
 echo -e "\t\$(MAKE) -C example/fixture" >> Makefile
 echo -e "\t\$(MAKE) -C example/feint" >> Makefile
 echo -e "\t\$(MAKE) -C example/fenl" >> Makefile
+echo -e "\t\$(MAKE) -C example/require_tag_issue" >> Makefile
 echo -e "\t\$(MAKE) -C example/make_buildlink build" >> Makefile
 echo -e "\t\$(MAKE) -C example/tutorial build" >> Makefile
 fi

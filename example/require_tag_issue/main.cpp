@@ -79,8 +79,8 @@ void demonstrate()
   Exec execInstance;
   auto range1 = require(Tag1Range(execInstance, 0, 100), P);
   auto range2 = require(Tag2Range(execInstance, 0, 100), P);
-  auto team1 = require(Tag1Team(execInstance, 25, 4), P);
-  auto team2 = require(Tag2Team(execInstance, 25, 4), P);
+  auto team1 = require(Tag1Team(execInstance, 25, 1), P);
+  auto team2 = require(Tag2Team(execInstance, 25, 1), P);
 }
 
 //----------------------------------------------------------------------------

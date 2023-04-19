@@ -630,6 +630,10 @@ void CudaInternal::finalize() {
   KOKKOS_IMPL_CUDA_SAFE_CALL(cudaFree(m_scratch_locks));
   m_scratch_locks     = nullptr;
   m_num_scratch_locks = 0;
+
+  // cuda-memcheck leak checking requires cudaDeviceReset() to
+  // be called before program exit
+  KOKKOS_IMPL_CUDA_SAFE_CALL(cudaDeviceReset());
 }
 
 //----------------------------------------------------------------------------

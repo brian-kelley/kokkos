@@ -1,62 +1,76 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
-
 #include <Kokkos_Core.hpp>
-
-#include <cstdio>
 #include <iostream>
+
+using Scalar = double;
+
+struct SegReduce
+{
+  // we call the argument lhs because in a scan, it's always a previous intermediate
+  // value updating the current value.
+  KOKKOS_INLINE_FUNCTION SegReduce& operator+=(const SegReduce& lhs)
+  {
+    if(!flag) {
+      val += lhs.val;
+    }
+    flag = flag || lhs.flag;
+    return *this;
+  }
+
+  Scalar val = 0;
+  bool flag = false;
+};
+
+using Exec = Kokkos::DefaultExecutionSpace;
+using Mem = typename Exec::memory_space;
 
 int main(int argc, char* argv[]) {
   Kokkos::initialize(argc, argv);
-  Kokkos::DefaultExecutionSpace{}.print_configuration(std::cout);
+  {
+    int seglen = 5;
+    int nsegs = 4;
+    int n = seglen * nsegs;
+    std::vector<double> vals(n);
+    for(int i = 0; i < n; i++)
+      vals[i] = (rand() % 100) * 0.01;
+    std::vector<double> gold;
+    double accum = 0;
+    for(int i = 0; i < n; i++) {
+      // reset accumulator at the start of each segment
+      if(i % seglen == 0)
+        accum = 0;
+      // inclusive, so add value at i before writing out result
+      accum += vals[i];
+      gold.push_back(accum);
+    }
+    std::cout << "gold:   ";
+    for(int i = 0; i < n; i++)
+      std::cout << gold[i] << " ";
+    std::cout << '\n';
 
-  if (argc < 2) {
-    fprintf(stderr, "Usage: %s [<kokkos_options>] <size>\n", argv[0]);
-    Kokkos::finalize();
-    exit(1);
+    Kokkos::View<Scalar*, Mem> input("input", n);
+    auto inputHost = Kokkos::create_mirror(input);
+    for(int i = 0; i < n; i++) inputHost(i) = vals[i];
+    Kokkos::deep_copy(input, inputHost);
+    Kokkos::View<Scalar*, Mem> result("result", n);
+
+    Kokkos::parallel_scan(Kokkos::RangePolicy<>(0, n),
+      KOKKOS_LAMBDA(int i, SegReduce& update, bool finalPass)
+      {
+        // Mark the beginning of each segment
+        if(i % seglen == 0) {
+          update.val = 0;
+          update.flag = true;
+        }
+        update.val += input(i);
+        if(finalPass) result(i) = update.val;
+      });
+
+    auto resultHost = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), result);
+    std::cout << "actual: ";
+    for(int i = 0; i < n; i++)
+      std::cout << resultHost(i) << ' ';
+    std::cout << '\n';
   }
-
-  const long n = strtol(argv[1], nullptr, 10);
-
-  printf("Number of even integers from 0 to %ld\n", n - 1);
-
-  Kokkos::Timer timer;
-  timer.reset();
-
-  // Compute the number of even integers from 0 to n-1, in parallel.
-  long count = 0;
-  Kokkos::parallel_reduce(
-      n, KOKKOS_LAMBDA(const long i, long& lcount) { lcount += (i % 2) == 0; },
-      count);
-
-  double count_time = timer.seconds();
-  printf("  Parallel: %ld    %10.6f\n", count, count_time);
-
-  timer.reset();
-
-  // Compare to a sequential loop.
-  long seq_count = 0;
-  for (long i = 0; i < n; ++i) {
-    seq_count += (i % 2) == 0;
-  }
-
-  count_time = timer.seconds();
-  printf("Sequential: %ld    %10.6f\n", seq_count, count_time);
-
   Kokkos::finalize();
-
-  return (count == seq_count) ? 0 : -1;
+  return 0;
 }
